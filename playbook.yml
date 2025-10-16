@@ -1,0 +1,36 @@
+---
+- name: Установка драйвера принтера HP LaserJet P1000/P1500 с GitHub
+  hosts: all
+  gather_facts: no
+
+  vars:
+    driver_url: "https://raw.githubusercontent.com/ThisIsKvarta/driver-deploy-hackathon/main/ljP1000_P1500-HB-pnp-win64-ru.exe"
+    driver_filename: "{{ driver_url | urlsplit('path') | basename }}"
+    temp_dir: "C:\\temp\\drivers"
+
+  tasks:
+    - name: 1. Гарантируем, что временная папка существует
+      ansible.windows.win_file:
+        path: "{{ temp_dir }}"
+        state: directory
+
+    - name: 2. Скачиваем установщик драйвера HP с GitHub
+      ansible.windows.win_get_url:
+        url: "{{ driver_url }}"
+        dest: "{{ temp_dir }}\\{{ driver_filename }}"
+
+    - name: 3. АСИНХРОННО запускаем тихую установку драйвера
+      ansible.windows.win_command: "{{ temp_dir }}\\{{ driver_filename }} /s"
+      async: 600
+      poll: 0
+
+    - name: 3.5. Ждем завершения установки драйвера
+      ansible.builtin.pause:
+        minutes: 3  # <-- Даем установщику 3 минуты на работу. Можно изменить.
+      when: true # Используем when: true, чтобы было видно, что это не ошибка, а задуманное действие
+
+    - name: 4. Очищаем временную папку после установки
+      ansible.windows.win_file:
+        path: "{{ temp_dir }}"
+        state: absent
+      ignore_errors: true
