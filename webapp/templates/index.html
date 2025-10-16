@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Панель управления установкой драйверов</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #282c34; color: #abb2bf; line-height: 1.6; }
+        .container { max-width: 800px; margin: 40px auto; padding: 20px; background: #21252b; border-radius: 8px; }
+        h1 { color: #61afef; }
+        select, button { font-size: 16px; padding: 10px; border-radius: 5px; border: 1px solid #3e4451; background: #2c313a; color: #abb2bf; }
+        button { cursor: pointer; background: #61afef; color: #21252b; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Установка драйвера HP LaserJet</h1>
+        <p>Выберите целевой компьютер и нажмите "Установить".</p>
+        <form action="/run_playbook" method="post">
+            <select name="hostname">
+                {% for host in hosts %}
+                    <option value="{{ host }}">{{ host }}</option>
+                {% else %}
+                    <option>Хосты не найдены в hosts.ini</option>
+                {% endfor %}
+            </select>
+            <button type="submit">Установить</button>
+        </form>
+    </div>
+</body>
+</html>
