@@ -1,0 +1,48 @@
+---
+- name: Универсальная установка драйвера принтера HP
+  hosts: all  # <-- Запускаем на ВСЕХ хостах из нашего inventory
+  gather_facts: yes # <-- ОБЯЗАТЕЛЬНО включаем сбор фактов, чтобы знать ОС
+
+  tasks:
+    # --- БЛОК ЗАДАЧ ДЛЯ WINDOWS ---
+    - name: Установка на Windows
+      block:
+        - name: Гарантируем, что временная папка существует (Win)
+          ansible.windows.win_file:
+            path: C:\temp\drivers
+            state: directory
+
+        - name: Скачиваем установщик .exe с GitHub (Win)
+          ansible.windows.win_get_url:
+            url: "https://raw.githubusercontent.com/ThisIsKvarta/driver-deploy-hackathon/main/ljP1000_P1500-HB-pnp-win64-ru.exe"
+            dest: C:\temp\drivers\ljP1000_P1500-HB-pnp-win64-ru.exe
+
+        - name: Асинхронно запускаем тихую установку (Win)
+          ansible.windows.win_command: C:\temp\drivers\ljP1000_P1500-HB-pnp-win64-ru.exe /s
+          async: 600
+          poll: 0
+
+        - name: Пауза для завершения установки (Win)
+          ansible.builtin.pause:
+            minutes: 3
+
+        - name: Очищаем временную папку (Win)
+          ansible.windows.win_file:
+            path: C:\temp\drivers
+            state: absent
+          ignore_errors: true
+
+      when: ansible_os_family == "Windows"
+
+
+    # --- БЛОК ЗАДАЧ ДЛЯ LINUX (DEBIAN/UBUNTU) ---
+    - name: Установка на Linux (Debian/Ubuntu)
+      block:
+        - name: Устанавливаем драйверы HP (HPLIP) через apt
+          ansible.builtin.apt:
+            name: hplip
+            state: present
+            update_cache: yes
+
+      become: yes # <-- Выполняем этот блок с правами sudo
+      when: ansible_os_family == "Debian"
