@@ -1,18 +1,18 @@
 # driver-deploy-hackathon
 Стек технологий: 
 1. Сервер управления (Control Node):
-  1.1. ОС: Ubuntu Server 22.04 LTS
-  1.2. Система автоматизации: Ansible
-  1.3. Веб-интерфейс: Python 3 + Flask
-  1.4. Система контроля версий: Git
+#1.1. ОС: Ubuntu Server 22.04 LTS
+#1.2. Система автоматизации: Ansible
+#1.3. Веб-интерфейс: Python 3 + Flask
+#1.4. Система контроля версий: Git
 2. Управляемые узлы (Managed Nodes):
-  2.1 Windows Server 2022 / Windows 10
-  2.2 Ubuntu Server 22.04 LTS
-3. Протоколы и технологии:
-  3.1 Для Windows: WinRM
-  3.2 Для Linux: SSH
-4. Хранение драйверов: GitHub Releases
-5. Логи в реальном времени: Server-Sent Events (SSE)
+#2.1 Windows Server 2022 / Windows 10
+#2.2 Ubuntu Server 22.04 LTS
+4. Протоколы и технологии:
+#3.1 Для Windows: WinRM
+#3.2 Для Linux: SSH
+5. Хранение драйверов: GitHub Releases
+6. Логи в реальном времени: Server-Sent Events (SSE)
 
 Проект работает по схеме браузер → Flask → Ansible → хост → лог → браузер.
 
