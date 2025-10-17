@@ -1,15 +1,18 @@
 # driver-deploy-hackathon
 
-стек:
-ОС: убунту сервер 25.04 лтс x2, винсервер 22
-веб-сервер: питон3 + фласк
-автоматизация: ансибл
-система контроля версий: гит
-репа: гитхаб
-протоколы: винрм, ссх
-пакеты: git, python3, python3-venv, pip, sshpass, pywinrm
-беспарольный доступ по ссх к убунту через ssh-keygen
-беспарольный доступ sudo через sudo visudo (там доп. строку писать)
+Сервер управления (Control Node):
+ОС: Ubuntu Server 22.04 LTS
+Система автоматизации: Ansible
+Веб-интерфейс: Python 3 + Flask
+Система контроля версий: Git
+Управляемые узлы (Managed Nodes):
+Windows Server 2022 / Windows 10
+Ubuntu Server 22.04 LTS
+Протоколы и технологии:
+Для Windows: WinRM
+Для Linux: SSH
+Хранение драйверов: GitHub Releases
+Логи в реальном времени: Server-Sent Events (SSE)
 
 Проект работает по схеме браузер → Flask → Ansible → хост → лог → браузер.
 
