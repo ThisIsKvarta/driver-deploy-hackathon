@@ -46,9 +46,11 @@ def stream():
         "ansible-playbook",
         "install_drivers.yml",
         "-i", "hosts.ini",
-        "--limit", hostname,
         "-t", drivers_str
     ]
+
+    if hostname != "all":
+        command.extend(["--limit", hostname])
 
     process = subprocess.Popen(
         command,

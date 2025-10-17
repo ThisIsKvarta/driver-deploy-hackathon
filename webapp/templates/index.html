@@ -23,11 +23,13 @@
             <div class="form-group">
                 <label for="hostname-select">1. Выберите целевой компьютер:</label>
                 <select name="hostname" id="hostname-select">
+                    <option value="all">--- ВСЕ ХОСТЫ ---</option>
                     {% for host in hosts %}
                         <option value="{{ host }}">{{ host }}</option>
                     {% else %}
                         <option>Хосты не найдены</option>
                     {% endfor %}
+                </select>
                 </select>
             </div>
 
