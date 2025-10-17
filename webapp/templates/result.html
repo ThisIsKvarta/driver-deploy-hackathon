@@ -2,20 +2,49 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Результат выполнения</title>
+    <title>Выполнение плейбука...</title>
     <style>
         body { font-family: monospace; background: #282c34; color: #abb2bf; }
         .container { max-width: 90%; margin: 40px auto; }
         h1 { color: #61afef; }
-        pre { background: #21252b; padding: 15px; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word; color: #98c379; }
-        a { color: #61afef; }
+        pre { background: #21252b; padding: 15px; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word; color: #98c379; min-height: 400px; }
+        a { color: #61afef; display: none; /* Ссылка появится после завершения */ }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Результат для хоста: {{ hostname }}</h1>
-        <pre><code>{{ output }}</code></pre>
-        <a href="/"> &larr; Вернуться на главную</a>
+        <h1>Лог выполнения для хоста: {{ hostname }}</h1>
+        <pre id="log-output"></pre>
+        <a id="back-link" href="/"> &larr; Готово! Вернуться на главную</a>
     </div>
+
+    <script>
+        const logOutput = document.getElementById('log-output');
+        const backLink = document.getElementById('back-link');
+
+        // Формируем URL для стрима с нужными параметрами
+        const url = `/stream?hostname={{ hostname }}&drivers={{ drivers }}`;
+        const eventSource = new EventSource(url);
+
+        // Эта функция будет вызываться каждый раз, когда сервер присылает новую строчку
+        eventSource.onmessage = function(event) {
+            const line = event.data;
+
+            if (line.includes('--- ПРОЦЕСС ЗАВЕРШЕН ---')) {
+                logOutput.textContent += line + '\n';
+                backLink.style.display = 'block'; // Показываем ссылку "назад"
+                eventSource.close(); // Закрываем соединение
+            } else {
+                logOutput.textContent += line + '\n';
+            }
+        };
+
+        // Обработка ошибки, если соединение оборвалось
+        eventSource.onerror = function() {
+            logOutput.textContent += '\n--- ОШИБКА СОЕДИНЕНИЯ С СЕРВЕРОМ ---';
+            backLink.style.display = 'block';
+            eventSource.close();
+        };
+    </script>
 </body>
 </html>

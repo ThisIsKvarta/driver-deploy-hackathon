@@ -1,58 +1,75 @@
 import subprocess
 import configparser
 import os
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, Response, stream_with_context
 
 app = Flask(__name__)
 
-# Определяем путь к корневой папке проекта
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+inventory_path = os.path.join(project_root, 'hosts.ini')
 
 def get_hosts():
-    """Читает хосты из файла hosts.ini."""
-    inventory_path = os.path.join(project_root, 'hosts.ini')
     config = configparser.ConfigParser()
     config.read(inventory_path)
-    if 'windows' in config:
-        # Возвращаем список имен хостов (то что до ansible_host=...)
-        return [host for host, _ in config.items('windows')]
-    return []
+    hosts = []
+    
+    sections = ['windows', 'linux']
+    for section in sections:
+        if config.has_section(section):
+            for option in config.options(section):
+                # Разделяем строку по пробелу и берем только первое слово (имя хоста)
+                hostname = option.split(' ')[0]
+                hosts.append(hostname)
+    return hosts
 
 @app.route('/')
 def index():
-    """Главная страница, показывает список хостов."""
     hosts = get_hosts()
     return render_template('index.html', hosts=hosts)
 
 @app.route('/run_playbook', methods=['POST'])
 def run_playbook():
-    """Запускает плейбук для выбранного хоста."""
     hostname = request.form.get('hostname')
-    if not hostname:
-        return "Ошибка: хост не выбран!", 400
+    selected_drivers = request.form.getlist('drivers')
 
-    # Формируем команду для запуска Ansible
-    # Мы запускаем ее из корневой папки проекта
+    if not hostname or not selected_drivers:
+        return "Ошибка: не все параметры выбраны!", 400
+
+    return render_template('result.html', hostname=hostname, drivers=",".join(selected_drivers))
+
+@app.route('/stream')
+def stream():
+    hostname = request.args.get('hostname')
+    drivers_str = request.args.get('drivers')
+
     command = [
         "ansible-playbook",
-        "playbook.yml",
+        "install_drivers.yml",
         "-i", "hosts.ini",
-        "--limit", hostname
+        "--limit", hostname,
+        "-t", drivers_str
     ]
 
-    # Запускаем процесс и получаем результат
-    result = subprocess.run(
+    process = subprocess.Popen(
         command,
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         text=True,
-        cwd=project_root  # Указываем рабочую директорию
+        cwd=project_root,
+        bufsize=1
     )
 
-    # Форматируем вывод для отображения в HTML
-    output = result.stdout + result.stderr
+    def generate():
+        yield f"data: Запускаем команду: {' '.join(command)}\n\n"
+        
+        for line in iter(process.stdout.readline, ''):
+            yield f"data: {line}\n\n"
+        
+        process.stdout.close()
+        return_code = process.wait()
+        yield f"data: \n--- ПРОЦЕСС ЗАВЕРШЕН С КОДОМ: {return_code} ---\n\n"
 
-    return render_template('result.html', output=output, hostname=hostname)
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
 if __name__ == '__main__':
-    # 0.0.0.0 чтобы было доступно по сети, а не только с localhost
     app.run(host='0.0.0.0', port=5000, debug=True)

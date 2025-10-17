@@ -1,0 +1,96 @@
+---
+- name: Универсальный установщик драйверов
+  hosts: all
+  gather_facts: yes
+
+  vars:
+    win_temp_dir: "C:\\temp\\ansible_downloads"
+
+  tasks:
+    - name: Подготовка временной папки на Windows
+      ansible.windows.win_file:
+        path: "{{ win_temp_dir }}"
+        state: directory
+      when: ansible_facts.os_family == "Windows"
+      tags: always
+
+    - name: Установка драйвера принтера HP
+      block:
+        - name: Установка на Windows (HP)
+          block:
+            - name: Скачиваем установщик (HP)
+              ansible.windows.win_get_url: { url: "https://github.com/ThisIsKvarta/driver-deploy-hackathon/releases/download/hp/ljP1000_P1500-HB-pnp-win64-ru.exe", dest: "{{ win_temp_dir }}\\hp_installer.exe" }
+            - name: Устанавливаем из локального файла (HP)
+              ansible.windows.win_package: { path: "{{ win_temp_dir }}\\hp_installer.exe", arguments: /s, state: present }
+          when: ansible_facts.os_family == "Windows"
+        - name: Установка на Linux (HP)
+          ansible.builtin.apt: { name: hplip, state: present, update_cache: yes }
+          become: yes
+          when: ansible_facts.os_family == "Debian"
+      tags:
+        - hp_printer
+
+    - name: Установка драйвера NVIDIA
+      block:
+        - name: Установка на Windows (NVIDIA)
+          block:
+            - name: Скачиваем установщик (NVIDIA)
+              ansible.windows.win_get_url: { url: "https://github.com/ThisIsKvarta/driver-deploy-hackathon/releases/download/nvidia/581.57-notebook-win10-win11-64bit-international-dch-whql.exe", dest: "{{ win_temp_dir }}\\nvidia_installer.exe" }
+            - name: Устанавливаем из локального файла (NVIDIA)
+              ansible.windows.win_command: "{{ win_temp_dir }}\\nvidia_installer.exe -s"
+              ignore_errors: true # <--- ВОТ ГЛАВНОЕ ИЗМЕНЕНИЕ
+          when: ansible_facts.os_family == "Windows"
+        - name: Установка на Linux (NVIDIA)
+          block:
+            - name: Скачиваем и устанавливаем GPG-ключ для репозитория NVIDIA
+              ansible.builtin.get_url:
+                url: "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2388FF3BE10A76F638F80723FCAE110B1118213C"
+                dest: "/etc/apt/trusted.gpg.d/graphics-drivers-ppa.asc"
+                mode: '0644'
+                force: yes
+
+            # ---> ВОТ ГЛАВНОЕ ИЗМЕНЕНИЕ <---
+            - name: Добавляем PPA-репозиторий с драйверами (явный способ)
+              ansible.builtin.apt_repository:
+                repo: "deb http://ppa.launchpad.net/graphics-drivers/ppa/ubuntu {{ ansible_facts.lsb.codename }} main"
+                state: present
+                update_cache: yes
+                filename: graphics-drivers-ppa
+
+            - name: Устанавливаем рекомендованный драйвер
+              ansible.builtin.apt:
+                name: nvidia-driver-580
+                state: present
+          become: yes
+          when: ansible_facts.os_family == "Debian"
+      tags:
+        - nvidia
+
+    - name: Установка драйвера графики Intel
+      block:
+        - name: Установка на Windows (Intel Graphics)
+          block:
+            - name: Скачиваем установщик (Intel)
+              ansible.windows.win_get_url: { url: "https://github.com/ThisIsKvarta/driver-deploy-hackathon/releases/download/intel/gfx_win_101.2137.exe", dest: "{{ win_temp_dir }}\\intel_installer.exe" }
+            - name: Устанавливаем из локального файла (Intel)
+              ansible.windows.win_command: "{{ win_temp_dir }}\\intel_installer.exe -s"
+              ignore_errors: true # <--- И ЗДЕСЬ ТОЖЕ
+          when: "'GenuineIntel' in ansible_facts.processor and ansible_facts.os_family == 'Windows'"
+        - name: Установка на Linux (CPU Microcode)
+          block:
+            - ansible.builtin.apt: { name: intel-microcode, state: present }
+              when: ansible_facts.processor_vendor is search("GenuineIntel")
+            - ansible.builtin.apt: { name: amd64-microcode, state: present }
+              when: ansible_facts.processor_vendor is search("AuthenticAMD")
+          become: yes
+          when: ansible_facts.os_family == "Debian"
+      tags:
+        - intel_graphics
+
+    - name: Очистка временной папки на Windows
+      ansible.windows.win_file:
+        path: "{{ win_temp_dir }}"
+        state: absent
+      when: ansible_facts.os_family == "Windows"
+      ignore_errors: true
+      tags: always

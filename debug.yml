@@ -1,0 +1,9 @@
+---
+- name: Показать все факты о хосте
+  hosts: all
+  gather_facts: yes
+
+  tasks:
+    - name: Вывод всех фактов
+      ansible.builtin.debug:
+        var: ansible_facts
